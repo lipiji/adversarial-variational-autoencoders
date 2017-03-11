@@ -4,7 +4,7 @@ import sys
 import numpy as np
 import theano
 import theano.tensor as T
-from VAE import *
+from AVAE import *
 import data
 import matplotlib.pyplot as plt
 
@@ -17,7 +17,6 @@ hidden_size = 500
 latent_size = 2
 # try: sgd, momentum, rmsprop, adagrad, adadelta, adam, nesterov_momentum
 optimizer = "adam"
-continuous = False
 
 train_set, valid_set, test_set = data.mnist()
 
@@ -27,21 +26,35 @@ dim_y = train_xy[0][1].shape[1]
 print "#features = ", dim_x, "#labels = ", dim_y
 
 print "compiling..."
-model = VAE(dim_x, dim_x, hidden_size, latent_size, continuous, optimizer)
+model = AVAE(dim_x, dim_x, hidden_size, latent_size, optimizer)
 
 print "training..."
 start = time.time()
-for i in xrange(50):
+for i in xrange(100):
     error = 0.0
+    error_d = 0.0
+    error_g = 0.0
     in_start = time.time()
     for batch_id, xy in train_xy.items():
-        X = xy[0] 
-        cost, z = model.train(X, lr)
+        X = xy[0]
+        local_bath_size = len(X)
+        Z = model.noiser(local_bath_size)
+
+        cost, loss_d, loss_g = model.train_d(X, Z, lr)
+        
         error += cost
+        error_d += loss_d
+        error_g += loss_g
+
     in_time = time.time() - in_start
 
     error /= len(train_xy);
-    print "Iter = " + str(i) + ", Loss = " + str(error) + ", Time = " + str(in_time)
+    error_d /= len(train_xy);
+    error_g /= len(train_xy);
+
+    print "Iter = " + str(i) + ", vlbd = " + str(error) \
+            + ", error_d = " + str(error_d) + ", error_g = " + str(error_g) \
+            + ", Time = " + str(in_time)
 
 print "training finished. Time = " + str(time.time() - start)
 
