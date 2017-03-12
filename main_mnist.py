@@ -8,9 +8,9 @@ from AVAE import *
 import data
 import matplotlib.pyplot as plt
 
-use_gpu(0)
+use_gpu(1)
 
-lr = 0.001
+lr = 0.0001
 drop_rate = 0.
 batch_size = 128
 hidden_size = 500
