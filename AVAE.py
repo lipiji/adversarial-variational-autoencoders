@@ -20,7 +20,7 @@ class AVAE(object):
         self.define_train_test_funcs()
         
     def noiser(self, n):
-        z = init_normal_weight((n, self.latent_size))
+        z = init_normal_weight((n, self.latent_size), scale=1.)
         return floatX(z)
         
     def define_layers(self):
@@ -39,7 +39,7 @@ class AVAE(object):
         self.params += [self.W_xh, self.b_xh, self.W_hu, self.b_hu, self.W_hsigma, self.b_hsigma]
 
         # encoder
-        h_enc = T.tanh(T.dot(self.X, self.W_xh) + self.b_xh)
+        h_enc = T.nnet.relu(T.dot(self.X, self.W_xh) + self.b_xh)
         
         self.mu = T.dot(h_enc, self.W_hu) + self.b_hu
         log_var = T.dot(h_enc, self.W_hsigma) + self.b_hsigma
@@ -68,7 +68,7 @@ class AVAE(object):
             self.params = [self.Wg_zh, self.bg_zh, self.Wg_hy, self.bg_hy]
         
         def generate(self, z):
-            h = T.tanh(T.dot(z, self.Wg_zh) + self.bg_zh)
+            h = T.nnet.relu(T.dot(z, self.Wg_zh) + self.bg_zh)
             y = T.nnet.sigmoid(T.dot(h, self.Wg_hy) + self.bg_hy)
             return y
 
@@ -80,18 +80,12 @@ class AVAE(object):
             self.hidden_size = hidden_size
             self.Wd_xh = init_weights((self.in_size, self.hidden_size), prefix + "Wd_xh")
             self.bd_xh = init_bias(self.hidden_size, prefix + "bd_xh")
-            #self.Wd_hh1 = init_weights((self.hidden_size, self.hidden_size), prefix + "Wd_hh1")
-            #self.bd_hh1 = init_bias(self.hidden_size, prefix + "bd_hh1")
-            #self.Wd_hh2 = init_weights((self.hidden_size, self.hidden_size), prefix + "Wd_hh12")
-            #self.bd_hh2 = init_bias(self.hidden_size, prefix + "bd_hh2")
             self.Wd_hy = init_weights((self.hidden_size, self.out_size), prefix + "Wd_hy")
             self.bd_hy = init_bias(self.out_size, prefix + "bd_hy")
             self.params = [self.Wd_xh, self.bd_xh,  self.Wd_hy, self.bd_hy]
 
         def discriminate(self, x):
-            h0 = T.tanh(T.dot(x, self.Wd_xh) + self.bd_xh)
-            #h1 = T.tanh(T.dot(h0, self.Wd_hh1) + self.bd_hh1)
-            #h2 = T.tanh(T.dot(h1, self.Wd_hh2) + self.bd_hh2)
+            h0 = T.nnet.relu(T.dot(x, self.Wd_xh) + self.bd_xh)
             y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
             return y
 
@@ -118,7 +112,7 @@ class AVAE(object):
 
         
         d2 = self.D.discriminate(self.X)
-        loss_d = T.mean(-T.log(d2) - T.log(1 - d0) - T.log(1 - d1))
+        loss_d = T.mean(-T.log(d2) - T.log(1 - d0) - T.log(1 - d1)) 
         gparams_d = []
         for param in self.params_dis:
             gparam = T.grad(loss_d, param)

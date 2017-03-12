@@ -39,7 +39,6 @@ for i in xrange(100):
         X = xy[0]
         local_bath_size = len(X)
         Z = model.noiser(local_bath_size)
-
         cost, loss_d, loss_g = model.train_d(X, Z, lr)
         
         error += cost
