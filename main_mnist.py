@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 
 use_gpu(1)
 
-lr = 0.0001
+lr = 0.001
 drop_rate = 0.
 batch_size = 128
 hidden_size = 500

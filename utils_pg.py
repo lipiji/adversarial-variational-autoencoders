@@ -22,8 +22,8 @@ def floatX(X):
 def init_normal_weight(shape, scale=0.01):
     return np.random.normal(loc=0.0, scale=scale, size=shape)
 
-def init_uniform_weight(shape):
-    return np.random.uniform(-0.1, 0.1, shape)
+def init_uniform_weight(shape, scale=0.1):
+    return np.random.uniform(-scale, scale, shape)
 
 def init_xavier_weight_uniform(shape):
     return np.random.uniform(-np.sqrt(6. / (shape[0] + shape[1])), np.sqrt(6. / (shape[0] + shape[1])), shape)

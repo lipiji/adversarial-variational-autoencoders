@@ -20,7 +20,7 @@ class AVAE(object):
         self.define_train_test_funcs()
         
     def noiser(self, n):
-        z = init_normal_weight((n, self.latent_size), scale=1.)
+        z = init_normal_weight((n, self.latent_size), scale=1)
         return floatX(z)
         
     def define_layers(self):
@@ -72,9 +72,9 @@ class AVAE(object):
             y = T.nnet.sigmoid(T.dot(h, self.Wg_hy) + self.bg_hy)
             return y
 
-    class Discriminator():
+    class DiscriminatorX():
         def __init__(self, in_size,  hidden_size):
-            prefix = "dis_"
+            prefix = "dis_x_"
             self.in_size = in_size
             self.out_size = 1
             self.hidden_size = hidden_size
@@ -89,6 +89,23 @@ class AVAE(object):
             y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
             return y
 
+    class DiscriminatorZ():
+        def __init__(self, in_size,  hidden_size):
+            prefix = "dis_z_"
+            self.in_size = in_size
+            self.out_size = 1
+            self.hidden_size = hidden_size
+            self.Wd_xh = init_weights((self.in_size, self.hidden_size), prefix + "Wd_xh")
+            self.bd_xh = init_bias(self.hidden_size, prefix + "bd_xh")
+            self.Wd_hy = init_weights((self.hidden_size, self.out_size), prefix + "Wd_hy")
+            self.bd_hy = init_bias(self.out_size, prefix + "bd_hy")
+            self.params = [self.Wd_xh, self.bd_xh,  self.Wd_hy, self.bd_hy]
+
+        def discriminate(self, z):
+            h0 = T.nnet.relu(T.dot(z, self.Wd_xh) + self.bd_xh)
+            y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
+            return y
+
     def multivariate_bernoulli(self, y_pred, y_true):
         return T.sum(y_true * T.log(y_pred) + (1 - y_true) * T.log(1 - y_pred), axis=1)
 
@@ -98,27 +115,34 @@ class AVAE(object):
     def define_train_test_funcs(self):
         vlbd = -T.mean((self.kld(self.mu, self.var) + self.multivariate_bernoulli(self.reconstruct, self.X))) 
         
-        self.D = self.Discriminator(self.in_size,  self.hidden_size)
-        self.params_dis = self.D.params
+        self.Dx = self.DiscriminatorX(self.in_size,  self.hidden_size)
+        self.params_dis = self.Dx.params
+        self.Dz = self.DiscriminatorZ(self.latent_size,  self.hidden_size)
+        self.params_dis += self.Dz.params
 
+        # encoder
+        d0 = self.Dz.discriminate(self.z) # real
+        d1 = self.Dz.discriminate(self.Z) # fake
+
+        # decoder
         g = self.G.generate(self.Z)
-        d0 = self.D.discriminate(g)
-        d1 = self.D.discriminate(self.reconstruct)
-        loss_g = T.mean(-T.log(d0) - T.log(d1))
-        gparams = []
-        for param in self.params:
-            gparam = T.grad(vlbd + loss_g, param)
-            gparams.append(gparam)
+        d2 = self.Dx.discriminate(g) # fake
+        d3 = self.Dx.discriminate(self.reconstruct) # real ?
+        d4 = self.Dx.discriminate(self.X) # real
 
-        
-        d2 = self.D.discriminate(self.X)
-        loss_d = T.mean(-T.log(d2) - T.log(1 - d0) - T.log(1 - d1)) 
+        loss_d = T.mean(-T.log(d0) - T.log(1 - d1) - T.log(d4) - T.log(1 - d2) - T.log(d3)) 
         gparams_d = []
         for param in self.params_dis:
             gparam = T.grad(loss_d, param)
             gparams_d.append(gparam)
 
-        
+        loss_g = T.mean(-T.log(d1) - T.log(d2))
+        gparams = []
+        for param in self.params:
+            gparam = T.grad(vlbd + loss_g, param)
+            gparams.append(gparam)
+
+                
         lr = T.scalar("lr")
         optimizer = eval(self.optimizer)
         updates = optimizer(self.params + self.params_dis, gparams + gparams_d, lr)
