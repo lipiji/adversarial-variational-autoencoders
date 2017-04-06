@@ -86,7 +86,8 @@ class AVAE(object):
 
         def discriminate(self, x):
             h0 = T.nnet.relu(T.dot(x, self.Wd_xh) + self.bd_xh)
-            y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
+            #y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
+            y = T.dot(h0, self.Wd_hy) + self.bd_hy
             return y
 
     class DiscriminatorZ():
@@ -103,7 +104,8 @@ class AVAE(object):
 
         def discriminate(self, z):
             h0 = T.nnet.relu(T.dot(z, self.Wd_xh) + self.bd_xh)
-            y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
+            #y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
+            y = T.dot(h0, self.Wd_hy) + self.bd_hy
             return y
 
     def multivariate_bernoulli(self, y_pred, y_true):
@@ -130,24 +132,35 @@ class AVAE(object):
         d3 = self.Dx.discriminate(self.reconstruct) # real ?
         d4 = self.Dx.discriminate(self.X) # real
 
-        loss_d = T.mean(-T.log(d0) - T.log(1 - d1) - T.log(d4) - T.log(1 - d2) - T.log(d3)) 
+        #loss_d = T.mean(-T.log(d0) - T.log(1 - d1) - T.log(d4) - T.log(1 - d2) - T.log(d3)) 
+        loss_d = T.mean(d0) - T.mean(d1) + T.mean(d4) - T.mean(d2) + T.mean(d3)
         gparams_d = []
         for param in self.params_dis:
             gparam = T.grad(loss_d, param)
             gparams_d.append(gparam)
 
-        loss_g = T.mean(-T.log(d1) - T.log(d2))
+        #loss_g = T.mean(-T.log(d1) - T.log(d2))
+        loss_g = -T.mean(d1) - T.mean(d2)
         gparams = []
         for param in self.params:
             gparam = T.grad(vlbd + loss_g, param)
             gparams.append(gparam)
-
                 
         lr = T.scalar("lr")
         optimizer = eval(self.optimizer)
-        updates = optimizer(self.params + self.params_dis, gparams + gparams_d, lr)
+        updates_d = optimizer(self.params_dis, gparams_d, lr)
+        clip_updates_d = []
+        for p, v in updates_d:
+            clip_updates_d.append((p, T.clip(v, -0.01, 0.01)))
+        updates_d = clip_updates_d
         
-        self.train_d = theano.function(inputs = [self.X, self.Z, lr], outputs = [vlbd, loss_d, loss_g], updates = updates)
+        updates_g = optimizer(self.params, gparams, lr)
+        updates = updates_d + updates_g
+
+        #self.train_d = theano.function(inputs = [self.X, self.Z, lr], outputs = [vlbd, loss_d, loss_g], updates = updates)
+        self.train_d = theano.function(inputs = [self.X, self.Z, lr], outputs = loss_d, updates = updates_d)
+        self.train_g = theano.function(inputs = [self.X, self.Z, lr], outputs = [vlbd,  loss_g], updates = updates_g)
+        
         self.validate = theano.function(inputs = [self.X], outputs = [vlbd, self.reconstruct])
         self.project = theano.function(inputs = [self.X], outputs = self.mu)
         self.generate = theano.function(inputs = [self.z], outputs = self.reconstruct)
