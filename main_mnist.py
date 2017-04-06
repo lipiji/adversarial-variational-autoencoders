@@ -30,7 +30,7 @@ model = AVAE(dim_x, dim_x, hidden_size, latent_size, optimizer)
 
 print "training..."
 start = time.time()
-for i in xrange(100):
+for i in xrange(200):
     error = 0.0
     error_d = 0.0
     error_g = 0.0

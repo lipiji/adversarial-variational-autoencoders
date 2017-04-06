@@ -8,7 +8,7 @@ from AVAE import *
 import data
 import matplotlib.pyplot as plt
 
-use_gpu(1)
+use_gpu(3)
 
 lr = 0.001
 drop_rate = 0.
@@ -16,7 +16,7 @@ batch_size = 128
 hidden_size = 500
 latent_size = 2
 # try: sgd, momentum, rmsprop, adagrad, adadelta, adam, nesterov_momentum
-optimizer = "adam"
+optimizer = "rmsprop"
 
 train_set, valid_set, test_set = data.freyface()
 
@@ -30,7 +30,7 @@ model = AVAE(dim_x, dim_x, hidden_size, latent_size, optimizer)
 
 print "training..."
 start = time.time()
-for i in xrange(100):
+for i in xrange(300):
     error = 0.0
     error_d = 0.0
     error_g = 0.0
@@ -39,8 +39,14 @@ for i in xrange(100):
         X = xy[0]
         local_bath_size = len(X)
         Z = model.noiser(local_bath_size)
-        cost, loss_d, loss_g = model.train_d(X, Z, lr)
         
+        loss_d = 0
+        for di in xrange(5):
+            loss_d += model.train_d(X, Z, lr)
+        loss_d = loss_d / 5
+        cost,  loss_g = model.train_g(X, Z, lr)
+        
+
         error += cost
         error_d += loss_d
         error_g += loss_g
