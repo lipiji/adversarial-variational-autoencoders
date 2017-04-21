@@ -20,7 +20,7 @@ class AVAE(object):
         self.define_train_test_funcs()
         
     def noiser(self, n):
-        z = init_normal_weight((n, self.latent_size), scale=1)
+        z = init_normal_weight((n, self.latent_size))
         return floatX(z)
         
     def define_layers(self):
@@ -133,14 +133,14 @@ class AVAE(object):
         d4 = self.Dx.discriminate(self.X) # real
 
         #loss_d = T.mean(-T.log(d0) - T.log(1 - d1) - T.log(d4) - T.log(1 - d2) - T.log(d3)) 
-        loss_d = T.mean(d0) - T.mean(d1) + T.mean(d4) - T.mean(d2) + T.mean(d3)
+        loss_d = T.mean(d0) - T.mean(d1) + T.mean(d4) - T.mean(d2) - T.mean(d3)
         gparams_d = []
         for param in self.params_dis:
             gparam = T.grad(loss_d, param)
             gparams_d.append(gparam)
 
         #loss_g = T.mean(-T.log(d1) - T.log(d2))
-        loss_g = -T.mean(d1) - T.mean(d2)
+        loss_g = -T.mean(d1) - T.mean(d2) - T.mean(d3)
         gparams = []
         for param in self.params:
             gparam = T.grad(vlbd + loss_g, param)

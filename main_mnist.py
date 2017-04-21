@@ -8,7 +8,7 @@ from AVAE import *
 import data
 import matplotlib.pyplot as plt
 
-use_gpu(3)
+use_gpu(0)
 
 lr = 0.001
 drop_rate = 0.
@@ -30,7 +30,7 @@ model = AVAE(dim_x, dim_x, hidden_size, latent_size, optimizer)
 
 print "training..."
 start = time.time()
-for i in xrange(200):
+for i in xrange(100):
     error = 0.0
     error_d = 0.0
     error_g = 0.0
