@@ -15,6 +15,7 @@ drop_rate = 0.
 batch_size = 128
 hidden_size = 500
 latent_size = 2
+iter_d = 5
 # try: sgd, momentum, rmsprop, adagrad, adadelta, adam, nesterov_momentum
 optimizer = "rmsprop"
 
@@ -41,9 +42,9 @@ for i in xrange(100):
         Z = model.noiser(local_bath_size)
         
         loss_d = 0
-        for di in xrange(5):
+        for di in xrange(iter_d):
             loss_d += model.train_d(X, Z, lr)
-        loss_d = loss_d / 5
+        loss_d = loss_d / iter_d
         cost,  loss_g = model.train_g(X, Z, lr)
         
         error += cost

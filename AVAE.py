@@ -68,7 +68,7 @@ class AVAE(object):
             self.params = [self.Wg_zh, self.bg_zh, self.Wg_hy, self.bg_hy]
         
         def generate(self, z):
-            h = T.nnet.relu(T.dot(z, self.Wg_zh) + self.bg_zh)
+            h = T.nnet.relu(T.dot(z, self.Wg_zh) + self.bg_zh, 0.01)
             y = T.nnet.sigmoid(T.dot(h, self.Wg_hy) + self.bg_hy)
             return y
 
@@ -80,14 +80,17 @@ class AVAE(object):
             self.hidden_size = hidden_size
             self.Wd_xh = init_weights((self.in_size, self.hidden_size), prefix + "Wd_xh")
             self.bd_xh = init_bias(self.hidden_size, prefix + "bd_xh")
+            self.Wd_xh2 = init_weights((self.hidden_size, self.hidden_size), prefix + "Wd_xh2")
+            self.bd_xh2 = init_bias(self.hidden_size, prefix + "bd_xh2")
             self.Wd_hy = init_weights((self.hidden_size, self.out_size), prefix + "Wd_hy")
             self.bd_hy = init_bias(self.out_size, prefix + "bd_hy")
-            self.params = [self.Wd_xh, self.bd_xh,  self.Wd_hy, self.bd_hy]
+            self.params = [self.Wd_xh, self.bd_xh, self.Wd_xh2, self.bd_xh2, self.Wd_hy, self.bd_hy]
 
         def discriminate(self, x):
-            h0 = T.nnet.relu(T.dot(x, self.Wd_xh) + self.bd_xh)
+            h0 = T.nnet.relu(T.dot(x, self.Wd_xh) + self.bd_xh, 0.01)
+            h1 = T.nnet.relu(T.dot(h0, self.Wd_xh2) + self.bd_xh2, 0.01)
             #y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
-            y = T.dot(h0, self.Wd_hy) + self.bd_hy
+            y = T.dot(h1, self.Wd_hy) + self.bd_hy
             return y
 
     class DiscriminatorZ():
@@ -103,7 +106,7 @@ class AVAE(object):
             self.params = [self.Wd_xh, self.bd_xh,  self.Wd_hy, self.bd_hy]
 
         def discriminate(self, z):
-            h0 = T.nnet.relu(T.dot(z, self.Wd_xh) + self.bd_xh)
+            h0 = T.nnet.relu(T.dot(z, self.Wd_xh) + self.bd_xh, 0.01)
             #y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
             y = T.dot(h0, self.Wd_hy) + self.bd_hy
             return y
@@ -129,7 +132,7 @@ class AVAE(object):
         # decoder
         g = self.G.generate(self.Z)
         d2 = self.Dx.discriminate(g) # fake
-        d3 = self.Dx.discriminate(self.reconstruct) # real ?
+        d3 = self.Dx.discriminate(self.reconstruct) # 0.8 * fake ?
         d4 = self.Dx.discriminate(self.X) # real
 
         #loss_d = T.mean(-T.log(d0) - T.log(1 - d1) - T.log(d4) - T.log(1 - d2) - T.log(d3)) 
