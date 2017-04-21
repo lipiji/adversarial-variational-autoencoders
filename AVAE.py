@@ -133,7 +133,7 @@ class AVAE(object):
         d4 = self.Dx.discriminate(self.X) # real
 
         #loss_d = T.mean(-T.log(d0) - T.log(1 - d1) - T.log(d4) - T.log(1 - d2) - T.log(d3)) 
-        loss_d = T.mean(d0) - T.mean(d1) + T.mean(d4) - T.mean(d2) - T.mean(d3)
+        loss_d = -T.mean(d0) + T.mean(d1) - T.mean(d4) + T.mean(d2) + T.mean(d3)
         gparams_d = []
         for param in self.params_dis:
             gparam = T.grad(loss_d, param)
