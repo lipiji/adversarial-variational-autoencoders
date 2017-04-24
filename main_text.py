@@ -15,6 +15,7 @@ drop_rate = 0.
 batch_size = 20
 hidden_size = 500
 latent_size = 2
+iter_d = 1
 # try: sgd, momentum, rmsprop, adagrad, adadelta, adam, nesterov_momentum
 optimizer = "rmsprop"
 continuous = False
@@ -31,7 +32,7 @@ model = AVAE(dim_x, dim_x, hidden_size, latent_size,  optimizer)
 
 print "training..."
 start = time.time()
-for i in xrange(100):
+for i in xrange(200):
     train_xy = data.batched_idx(train_idx, batch_size)
     error = 0.0
     error_d = 0.0 
@@ -43,9 +44,9 @@ for i in xrange(100):
         Z = model.noiser(local_bath_size) 
         
         loss_d = 0
-        for di in xrange(5):
+        for di in xrange(iter_d):
             loss_d += model.train_d(X, Z, lr)
-        loss_d = loss_d / 5
+        loss_d = loss_d / iter_d
         cost,  loss_g = model.train_g(X, Z, lr)
 
         error += cost

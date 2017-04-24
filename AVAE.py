@@ -21,6 +21,7 @@ class AVAE(object):
         
     def noiser(self, n):
         z = init_normal_weight((n, self.latent_size))
+        #z = init_uniform_weight((n, self.latent_size))
         return floatX(z)
         
     def define_layers(self):
@@ -80,17 +81,17 @@ class AVAE(object):
             self.hidden_size = hidden_size
             self.Wd_xh = init_weights((self.in_size, self.hidden_size), prefix + "Wd_xh")
             self.bd_xh = init_bias(self.hidden_size, prefix + "bd_xh")
-            self.Wd_xh2 = init_weights((self.hidden_size, self.hidden_size), prefix + "Wd_xh2")
-            self.bd_xh2 = init_bias(self.hidden_size, prefix + "bd_xh2")
+            #self.Wd_xh2 = init_weights((self.hidden_size, self.hidden_size), prefix + "Wd_xh2")
+            #self.bd_xh2 = init_bias(self.hidden_size, prefix + "bd_xh2")
             self.Wd_hy = init_weights((self.hidden_size, self.out_size), prefix + "Wd_hy")
             self.bd_hy = init_bias(self.out_size, prefix + "bd_hy")
-            self.params = [self.Wd_xh, self.bd_xh, self.Wd_xh2, self.bd_xh2, self.Wd_hy, self.bd_hy]
+            self.params = [self.Wd_xh, self.bd_xh,  self.Wd_hy, self.bd_hy]
 
         def discriminate(self, x):
             h0 = T.nnet.relu(T.dot(x, self.Wd_xh) + self.bd_xh, 0.01)
-            h1 = T.nnet.relu(T.dot(h0, self.Wd_xh2) + self.bd_xh2, 0.01)
+            #h1 = T.nnet.relu(T.dot(h0, self.Wd_xh2) + self.bd_xh2, 0.01)
             #y = T.nnet.sigmoid(T.dot(h0, self.Wd_hy) + self.bd_hy)
-            y = T.dot(h1, self.Wd_hy) + self.bd_hy
+            y = T.dot(h0, self.Wd_hy) + self.bd_hy
             return y
 
     class DiscriminatorZ():
@@ -135,15 +136,15 @@ class AVAE(object):
         d3 = self.Dx.discriminate(self.reconstruct) # 0.8 * fake ?
         d4 = self.Dx.discriminate(self.X) # real
 
-        #loss_d = T.mean(-T.log(d0) - T.log(1 - d1) - T.log(d4) - T.log(1 - d2) - T.log(d3)) 
-        loss_d = -T.mean(d0) + T.mean(d1) - T.mean(d4) + T.mean(d2) + T.mean(d3)
+        #loss_d = T.mean(-T.log(d0) - T.log(1 - d1) - T.log(d4) - T.log(1 - d2) - T.log(1 - d3)) 
+        loss_d = -T.mean(d0) + T.mean(d1) - T.mean(d4) + T.mean(d2) #+ T.mean(d3)
         gparams_d = []
         for param in self.params_dis:
             gparam = T.grad(loss_d, param)
             gparams_d.append(gparam)
 
-        #loss_g = T.mean(-T.log(d1) - T.log(d2))
-        loss_g = -T.mean(d1) - T.mean(d2) - T.mean(d3)
+        #loss_g = T.mean(- T.log(d2) - T.log(d3))
+        loss_g = - T.mean(d2) - T.mean(d3)
         gparams = []
         for param in self.params:
             gparam = T.grad(vlbd + loss_g, param)
@@ -154,11 +155,9 @@ class AVAE(object):
         updates_d = optimizer(self.params_dis, gparams_d, lr)
         clip_updates_d = []
         for p, v in updates_d:
-            clip_updates_d.append((p, T.clip(v, -0.01, 0.01)))
+            clip_updates_d.append((p, T.clip(v, -0.05, 0.05)))
         updates_d = clip_updates_d
-        
         updates_g = optimizer(self.params, gparams, lr)
-        updates = updates_d + updates_g
 
         #self.train_d = theano.function(inputs = [self.X, self.Z, lr], outputs = [vlbd, loss_d, loss_g], updates = updates)
         self.train_d = theano.function(inputs = [self.X, self.Z, lr], outputs = loss_d, updates = updates_d)

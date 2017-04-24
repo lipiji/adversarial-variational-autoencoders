@@ -8,14 +8,14 @@ from AVAE import *
 import data
 import matplotlib.pyplot as plt
 
-use_gpu(1)
+use_gpu(0)
 
 lr = 0.001
 drop_rate = 0.
 batch_size = 128
-hidden_size = 500
+hidden_size = 400
 latent_size = 2
-iter_d = 5
+iter_d = 1
 # try: sgd, momentum, rmsprop, adagrad, adadelta, adam, nesterov_momentum
 optimizer = "rmsprop"
 
@@ -31,7 +31,7 @@ model = AVAE(dim_x, dim_x, hidden_size, latent_size, optimizer)
 
 print "training..."
 start = time.time()
-for i in xrange(100):
+for i in xrange(200):
     error = 0.0
     error_d = 0.0
     error_g = 0.0
@@ -40,22 +40,18 @@ for i in xrange(100):
         X = xy[0]
         local_bath_size = len(X)
         Z = model.noiser(local_bath_size)
-        
-        loss_d = 0
-        for di in xrange(iter_d):
-            loss_d += model.train_d(X, Z, lr)
-        loss_d = loss_d / iter_d
-        cost,  loss_g = model.train_g(X, Z, lr)
-        
-        error += cost
+        if batch_id % iter_d == 0:
+            cost,  loss_g = model.train_g(X, Z, lr)
+            error += cost
+            error_g += loss_g
+        loss_d = model.train_d(X, Z, lr)
         error_d += loss_d
-        error_g += loss_g
 
     in_time = time.time() - in_start
 
-    error /= len(train_xy);
+    error /= len(train_xy) / iter_d;
     error_d /= len(train_xy);
-    error_g /= len(train_xy);
+    error_g /= len(train_xy) / iter_d;
 
     print "Iter = " + str(i) + ", vlbd = " + str(error) \
             + ", error_d = " + str(error_d) + ", error_g = " + str(error_g) \
