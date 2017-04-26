@@ -17,7 +17,7 @@ hidden_size = 500
 latent_size = 2
 iter_d = 1
 # try: sgd, momentum, rmsprop, adagrad, adadelta, adam, nesterov_momentum
-optimizer = "rmsprop"
+optimizer = "adam"
 
 train_set, valid_set, test_set = data.freyface()
 
@@ -38,13 +38,16 @@ for i in xrange(300):
     in_start = time.time()
     for batch_id, xy in train_xy.items():
         X = xy[0]
+        if i < 50:
+            error += model.train_vae(X, lr)
+            continue 
         local_bath_size = len(X)
         Z = model.noiser(local_bath_size)
         
         loss_d = 0
         for di in xrange(iter_d):
             loss_d += model.train_d(X, Z, lr)
-        loss_d = loss_d / iter_d
+
         cost,  loss_g = model.train_g(X, Z, lr)
         
 
@@ -55,7 +58,7 @@ for i in xrange(300):
     in_time = time.time() - in_start
 
     error /= len(train_xy);
-    error_d /= len(train_xy);
+    error_d /= len(train_xy) / iter_d;
     error_g /= len(train_xy);
 
     print "Iter = " + str(i) + ", vlbd = " + str(error) \

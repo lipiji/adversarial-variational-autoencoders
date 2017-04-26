@@ -120,7 +120,12 @@ class AVAE(object):
 
     def define_train_test_funcs(self):
         vlbd = -T.mean((self.kld(self.mu, self.var) + self.multivariate_bernoulli(self.reconstruct, self.X))) 
-        
+        gparams_vae = []
+        for param in self.params:
+            gparam = T.grad(vlbd, param)
+            gparams_vae.append(gparam)
+
+
         self.Dx = self.DiscriminatorX(self.in_size,  self.hidden_size)
         self.params_dis = self.Dx.params
         self.Dz = self.DiscriminatorZ(self.latent_size,  self.hidden_size)
@@ -137,7 +142,7 @@ class AVAE(object):
         d4 = self.Dx.discriminate(self.X) # real
 
         #loss_d = T.mean(-T.log(d0) - T.log(1 - d1) - T.log(d4) - T.log(1 - d2) - T.log(1 - d3)) 
-        loss_d = -T.mean(d0) + T.mean(d1) - T.mean(d4) + T.mean(d2) #+ T.mean(d3)
+        loss_d = -T.mean(d0) + T.mean(d1) - T.mean(d4) + T.mean(d2) + T.mean(d3)
         gparams_d = []
         for param in self.params_dis:
             gparam = T.grad(loss_d, param)
@@ -155,11 +160,12 @@ class AVAE(object):
         updates_d = optimizer(self.params_dis, gparams_d, lr)
         clip_updates_d = []
         for p, v in updates_d:
-            clip_updates_d.append((p, T.clip(v, -0.05, 0.05)))
+            clip_updates_d.append((p, T.clip(v, -0.01, 0.01)))
         updates_d = clip_updates_d
         updates_g = optimizer(self.params, gparams, lr)
+        updates_vae = optimizer(self.params, gparams_vae, lr)
 
-        #self.train_d = theano.function(inputs = [self.X, self.Z, lr], outputs = [vlbd, loss_d, loss_g], updates = updates)
+        self.train_vae = theano.function(inputs = [self.X, lr], outputs = vlbd, updates = updates_vae)
         self.train_d = theano.function(inputs = [self.X, self.Z, lr], outputs = loss_d, updates = updates_d)
         self.train_g = theano.function(inputs = [self.X, self.Z, lr], outputs = [vlbd,  loss_g], updates = updates_g)
         

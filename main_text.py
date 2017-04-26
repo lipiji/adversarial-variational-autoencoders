@@ -17,7 +17,7 @@ hidden_size = 500
 latent_size = 2
 iter_d = 1
 # try: sgd, momentum, rmsprop, adagrad, adadelta, adam, nesterov_momentum
-optimizer = "rmsprop"
+optimizer = "adam"
 continuous = False
 
 train_idx, valid_idx, test_idx, other_data = data.apnews()
@@ -43,10 +43,12 @@ for i in xrange(200):
         local_bath_size = len(x_idx)
         Z = model.noiser(local_bath_size) 
         
+        if i < 300:
+            error += model.train_vae(X, lr)
+            continue
         loss_d = 0
         for di in xrange(iter_d):
             loss_d += model.train_d(X, Z, lr)
-        loss_d = loss_d / iter_d
         cost,  loss_g = model.train_g(X, Z, lr)
 
         error += cost
@@ -56,7 +58,7 @@ for i in xrange(200):
     in_time = time.time() - in_start
 
     error /= len(train_xy);
-    error_d /= len(train_xy);
+    error_d /= len(train_xy) / iter_d;
     error_g /= len(train_xy);
 
     print "Iter = " + str(i) + ", vlbd = " + str(error) \
