@@ -1,4 +1,4 @@
-##Adversarial Variational Auto-Encoders (AVAEs)
+## Adversarial Variational Auto-Encoders (AVAEs)
 
 run: python main_mnist.py
      
